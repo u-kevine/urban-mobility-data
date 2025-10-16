@@ -1,0 +1,7 @@
+[INFO] Loaded raw/train.csv with 1,458,923 rows
+[WARNING] 124 rows dropped due to missing coordinates
+[WARNING] 289 rows dropped for invalid fare amounts (<0)
+[INFO] 1,458,510 valid trips remaining
+[INFO] Added derived features: avg_speed_kmh, fare_per_km, trip_duration_min
+[INFO] Saved cleaned dataset to data/processed/cleaned_trips.csv
+

@@ -1,0 +1,1 @@
+df.head(1000).to_csv("data/samples/sample_1000.csv", index=False)

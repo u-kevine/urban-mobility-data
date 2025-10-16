@@ -1,0 +1,11 @@
+Flask==3.0.3
+python-dotenv==1.0.1
+mysqlclient==2.2.7
+SQLAlchemy==2.0.36
+pandas==2.2.2
+python-dateutil==2.9.0.post0
+pytz==2024.1
+tqdm==4.66.5
+gunicorn==22.0.0
+pymysql
+
