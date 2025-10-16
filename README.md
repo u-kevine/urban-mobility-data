@@ -1,5 +1,10 @@
 # Urban Mobility Data Explorer
 
+# Team 17
+- Kevine Uwisanga
+- Tito Jean Sibo
+- Nkhomotabo Amazing Mkhonta
+
 A comprehensive full-stack application for analyzing New York City taxi trip patterns using real-world datasets. This project demonstrates enterprise-level data processing, database design, and interactive visualization capabilities for urban mobility insights.
 
 ## Project Overview
