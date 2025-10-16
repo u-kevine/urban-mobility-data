@@ -13,28 +13,120 @@ try:
 except Exception:
     pass
 
-# Database URL - updated to match your docker-compose
+# Configure logging first
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Database URL - fallback to SQLite for development
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "mysql+pymysql://my_user:my_password@localhost:3306/my_database"
+    "sqlite:///demo_data.db"
 )
 
 # Create engine with connection pooling
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    pool_size=10,
-    max_overflow=20
-)
+try:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        pool_size=10,
+        max_overflow=20
+    )
+    # Test connection and check if trips table exists
+    with engine.connect() as conn:
+        conn.execute(text("SELECT COUNT(*) FROM trips LIMIT 1"))
+    USE_MOCK_DATA = False
+    logger.info("Database connection successful, using real data.")
+except Exception as e:
+    logger.warning(f"Database connection or trips table not found: {e}. Using mock data.")
+    engine = None
+    USE_MOCK_DATA = True
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend
 
-# Configure logging
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Mock data for demo purposes
+MOCK_TRIPS = [
+    {
+        'id': i,
+        'pickup_datetime': f'2024-01-{(i % 28) + 1:02d} {(i % 24):02d}:00:00',
+        'trip_duration_seconds': 600 + (i * 30) % 1800,
+        'trip_distance_km': 2.5 + (i * 0.5) % 15,
+        'trip_speed_kmh': 15 + (i * 2) % 40,
+        'fare_amount': 8.50 + (i * 0.75) % 25,
+        'passenger_count': 1 + (i % 4),
+        'pickup_lat': 40.7589 + (i * 0.001) % 0.1,
+        'pickup_lon': -73.9851 + (i * 0.001) % 0.1,
+        'dropoff_lat': 40.7489 + (i * 0.001) % 0.1,
+        'dropoff_lon': -73.9751 + (i * 0.001) % 0.1,
+        'vendor_id': 1 + (i % 2),
+        'tip_amount': 1.50 + (i * 0.25) % 5,
+        'fare_per_km': 3.40 + (i * 0.1) % 2,
+        'tip_pct': 15 + (i % 10),
+        'hour_of_day': i % 24,
+        'day_of_week': i % 7
+    }
+    for i in range(1, 1001)
+]
+
+def get_mock_summary():
+    return {
+        'total_trips': len(MOCK_TRIPS),
+        'avg_distance_km': 8.75,
+        'avg_fare': 16.25,
+        'avg_tip': 2.75,
+        'avg_speed_kmh': 25.5
+    }
+
+def get_mock_hotspots():
+    return [
+        {'zone_id': 1, 'zone_name': 'Times Square', 'trips': 150},
+        {'zone_id': 2, 'zone_name': 'Central Park', 'trips': 120},
+        {'zone_id': 3, 'zone_name': 'Brooklyn Bridge', 'trips': 95},
+        {'zone_id': 4, 'zone_name': 'JFK Airport', 'trips': 85},
+        {'zone_id': 5, 'zone_name': 'Wall Street', 'trips': 75}
+    ]
+
+def get_mock_insights():
+    return {
+        'rush_hour': {
+            'explanation': 'Trips by hour',
+            'data': [
+                {'hour_of_day': h, 'trips': 20 + (h * 5) % 60}
+                for h in range(24)
+            ]
+        },
+        'spatial_hotspots': {
+            'explanation': 'Morning vs Evening demand',
+            'morning': [
+                {'zone_name': 'Financial District', 'trips': 45},
+                {'zone_name': 'Midtown East', 'trips': 38}
+            ],
+            'evening': [
+                {'zone_name': 'Times Square', 'trips': 52},
+                {'zone_name': 'Greenwich Village', 'trips': 41}
+            ]
+        }
+    }
+
+def get_mock_routes():
+    return [
+        {'pickup_zone_name': 'JFK Airport', 'dropoff_zone_name': 'Manhattan', 'trips': 85},
+        {'pickup_zone_name': 'Times Square', 'dropoff_zone_name': 'Central Park', 'trips': 72},
+        {'pickup_zone_name': 'Brooklyn', 'dropoff_zone_name': 'Manhattan', 'trips': 68}
+    ]
+
+def get_mock_fare_stats():
+    return {
+        'summary': {
+            'avg_fare': 16.25,
+            'stddev_fare': 8.50,
+            'min_fare': 4.50,
+            'max_fare': 85.00,
+            'avg_fare_per_km': 4.25
+        }
+    }
 
 
 # -------------------------
@@ -121,6 +213,13 @@ def root():
 @app.route("/health", methods=["GET"])
 def health():
     """Health check endpoint"""
+    if USE_MOCK_DATA:
+        return jsonify({
+            "status": "healthy",
+            "database": "mock_data",
+            "trips_count": len(MOCK_TRIPS)
+        })
+    
     try:
         with engine.connect() as conn:
             result = conn.execute(text("SELECT COUNT(*) as count FROM trips"))
@@ -141,6 +240,9 @@ def health():
 @app.route("/api/summary", methods=["GET"])
 def summary():
     """Get aggregated summary statistics"""
+    if USE_MOCK_DATA:
+        return jsonify(get_mock_summary())
+    
     try:
         start = parse_date_param("start")
         end = parse_date_param("end")
@@ -205,6 +307,9 @@ def time_series():
 @app.route("/api/hotspots", methods=["GET"])
 def hotspots():
     """Get top pickup hotspots"""
+    if USE_MOCK_DATA:
+        return jsonify(get_mock_hotspots())
+    
     try:
         k = min(int(request.args.get("k", 20)), 100)
         start = parse_date_param("start")
@@ -261,6 +366,9 @@ def hotspots():
 @app.route("/api/fare-stats", methods=["GET"])
 def fare_stats():
     """Get fare statistics"""
+    if USE_MOCK_DATA:
+        return jsonify(get_mock_fare_stats())
+    
     try:
         start = parse_date_param("start")
         end = parse_date_param("end")
@@ -291,6 +399,9 @@ def fare_stats():
 @app.route("/api/top-routes", methods=["GET"])
 def top_routes():
     """Get top routes"""
+    if USE_MOCK_DATA:
+        return jsonify(get_mock_routes())
+    
     try:
         n = min(int(request.args.get("n", 20)), 100)
         start = parse_date_param("start")
@@ -328,6 +439,19 @@ def top_routes():
 @app.route("/api/trips", methods=["GET"])
 def trips():
     """Get paginated trip details"""
+    if USE_MOCK_DATA:
+        page = max(int(request.args.get("page", 1)), 1)
+        limit = min(int(request.args.get("limit", 100)), 1000)
+        offset = (page - 1) * limit
+        
+        trips_subset = MOCK_TRIPS[offset:offset + limit]
+        return jsonify({
+            "page": page,
+            "limit": limit,
+            "total": len(MOCK_TRIPS),
+            "rows": trips_subset
+        })
+    
     try:
         start = parse_date_param("start")
         end = parse_date_param("end")
@@ -387,6 +511,9 @@ def trips():
 @app.route("/api/insights", methods=["GET"])
 def insights():
     """Get data insights"""
+    if USE_MOCK_DATA:
+        return jsonify(get_mock_insights())
+    
     try:
         start = parse_date_param("start")
         end = parse_date_param("end")
@@ -445,7 +572,7 @@ def insights():
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 3000))
+    port = int(os.getenv("PORT", 5001))
     debug = os.getenv("FLASK_DEBUG", "false").lower() in ("1", "true")
     
     logger.info(f"Starting Flask app on port {port}")

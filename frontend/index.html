@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NYC Taxi Analytics Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="header">
+    <h1>NYC Taxi Analytics Dashboard</h1>
+    <button id="theme-toggle" class="theme-toggle">Dark Mode</button>
+  </div>
+
+  <div class="container">
+    <div id="status-banner" class="status-banner">
+      <div class="status-indicator" id="status-indicator"></div>
+      <span id="status-text">Connecting to backend...</span>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Total Trips</h3>
+        <div class="value" id="total-trips">—</div>
+      </div>
+      <div class="stat-card">
+        <h3>Avg Distance (km)</h3>
+        <div class="value" id="avg-distance">—</div>
+      </div>
+      <div class="stat-card">
+        <h3>Avg Fare ($)</h3>
+        <div class="value" id="avg-fare">—</div>
+      </div>
+      <div class="stat-card">
+        <h3>Avg Speed (km/h)</h3>
+        <div class="value" id="avg-speed">—</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <h2>Filters</h2>
+      <div class="filter-grid">
+        <div class="filter-group">
+          <label>Date From</label>
+          <input type="date" id="date-from">
+        </div>
+        <div class="filter-group">
+          <label>Date To</label>
+          <input type="date" id="date-to">
+        </div>
+        <div class="filter-group">
+          <label>Min Distance (km)</label>
+          <input type="number" id="distance-min" step="0.1" placeholder="0">
+        </div>
+        <div class="filter-group">
+          <label>Max Distance (km)</label>
+          <input type="number" id="distance-max" step="0.1" placeholder="100">
+        </div>
+      </div>
+      <button id="apply-filters" class="btn">Apply Filters</button>
+      <button id="reset-filters" class="btn" style="background: var(--text-secondary); margin-left: 0.5rem;">Reset</button>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>Trips by Hour</h3>
+        <canvas id="hourChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Distance Distribution</h3>
+        <canvas id="distanceChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Speed Distribution</h3>
+        <canvas id="speedChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Top Pickup Zones</h3>
+        <canvas id="hotspotsChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Top Routes</h3>
+        <canvas id="routesChart"></canvas>
+      </div>
+    </div>
+
+    <div class="insights-section">
+      <h2>Key Insights</h2>
+      <div id="insights-container">
+        <div class="loading">Loading insights...</div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-header">
+        <h2>Recent Trips</h2>
+      </div>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Pickup Time</th>
+              <th>Duration (min)</th>
+              <th>Distance (km)</th>
+              <th>Speed (km/h)</th>
+              <th>Fare ($)</th>
+              <th>Passengers</th>
+            </tr>
+          </thead>
+          <tbody id="trips-tbody">
+            <tr>
+              <td colspan="7" class="loading">Loading data...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination">
+        <button id="prev-page" disabled>← Previous</button>
+        <span id="page-info">Page 1</span>
+        <button id="next-page">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
+
