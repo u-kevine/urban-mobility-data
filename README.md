@@ -234,3 +234,5 @@ This project is developed for educational and research purposes. The codebase de
 **License**: MIT License - Feel free to use, modify, and distribute according to license terms.
 
 **Academic Integrity**: This project represents original work and demonstrates understanding of full-stack development, data analysis, and system architecture principles.
+youtube video
+https://youtu.be/6hXp0vrk6y8
