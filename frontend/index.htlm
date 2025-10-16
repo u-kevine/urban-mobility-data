@@ -1,0 +1,744 @@
+CTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NYC Taxi Analytics Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f9fa;
+      --text-primary: #212529;
+      --text-secondary: #6c757d;
+      --border-color: #dee2e6;
+      --accent-color: #0d6efd;
+      --success-color: #198754;
+      --danger-color: #dc3545;
+      --warning-color: #ffc107;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #1a1a1a;
+      --bg-secondary: #2d2d2d;
+      --text-primary: #e9ecef;
+      --text-secondary: #adb5bd;
+      --border-color: #495057;
+      --accent-color: #0d6efd;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    .header {
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .theme-toggle {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: opacity 0.2s;
+    }
+
+    .theme-toggle:hover {
+      opacity: 0.9;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .status-banner {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--success-color);
+      animation: pulse 2s infinite;
+    }
+
+    .status-indicator.error {
+      background: var(--danger-color);
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .stat-card h3 {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent-color);
+    }
+
+    .filters {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .filters h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .filter-group label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .filter-group input {
+      padding: 0.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+
+    .btn {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .chart-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .chart-card h3 {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    .table-container {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+
+    .table-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .table-header h2 {
+      font-size: 1.25rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: var(--bg-secondary);
+    }
+
+    th, td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    tbody tr:hover {
+      background: var(--bg-secondary);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-secondary);
+    }
+
+    .error-message {
+      background: #fee;
+      color: var(--danger-color);
+      padding: 1rem;
+      border-radius: 4px;
+      margin: 1rem 0;
+      border: 1px solid var(--danger-color);
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+    }
+
+    .pagination button {
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🚕 NYC Taxi Analytics Dashboard</h1>
+    <button id="theme-toggle" class="theme-toggle">🌙 Dark Mode</button>
+  </div>
+
+  <div class="container">
+    <div id="status-banner" class="status-banner">
+      <div class="status-indicator" id="status-indicator"></div>
+      <span id="status-text">Connecting to backend...</span>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Total Trips</h3>
+        <div class="value" id="total-trips">—</div>
+      </div>
+      <div class="stat-card">
+        <h3>Avg Distance (km)</h3>
+        <div class="value" id="avg-distance">—</div>
+      </div>
+      <div class="stat-card">
+        <h3>Avg Fare ($)</h3>
+        <div class="value" id="avg-fare">—</div>
+      </div>
+      <div class="stat-card">
+        <h3>Avg Speed (km/h)</h3>
+        <div class="value" id="avg-speed">—</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <h2>Filters</h2>
+      <div class="filter-grid">
+        <div class="filter-group">
+          <label>Date From</label>
+          <input type="date" id="date-from">
+        </div>
+        <div class="filter-group">
+          <label>Date To</label>
+          <input type="date" id="date-to">
+        </div>
+        <div class="filter-group">
+          <label>Min Distance (km)</label>
+          <input type="number" id="distance-min" step="0.1" placeholder="0">
+        </div>
+        <div class="filter-group">
+          <label>Max Distance (km)</label>
+          <input type="number" id="distance-max" step="0.1" placeholder="100">
+        </div>
+      </div>
+      <button id="apply-filters" class="btn">Apply Filters</button>
+      <button id="reset-filters" class="btn" style="background: var(--text-secondary); margin-left: 0.5rem;">Reset</button>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>Trips by Hour</h3>
+        <canvas id="hourChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Distance Distribution</h3>
+        <canvas id="distanceChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Speed Distribution</h3>
+        <canvas id="speedChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Top Pickup Zones</h3>
+        <canvas id="hotspotsChart"></canvas>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-header">
+        <h2>Recent Trips</h2>
+      </div>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Pickup Time</th>
+              <th>Duration (min)</th>
+              <th>Distance (km)</th>
+              <th>Speed (km/h)</th>
+              <th>Fare ($)</th>
+              <th>Passengers</th>
+            </tr>
+          </thead>
+          <tbody id="trips-tbody">
+            <tr>
+              <td colspan="7" class="loading">Loading data...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination">
+        <button id="prev-page" disabled>← Previous</button>
+        <span id="page-info">Page 1</span>
+        <button id="next-page">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3000';
+    let currentPage = 1;
+    let currentFilters = {};
+    const TRIPS_PER_PAGE = 50;
+
+    // Theme management
+    function applyTheme(theme) {
+      const t = theme || localStorage.getItem('theme') || 'light';
+      document.body.setAttribute('data-theme', t);
+      localStorage.setItem('theme', t);
+      const btn = document.getElementById('theme-toggle');
+      btn.textContent = t === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+    }
+
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const current = document.body.getAttribute('data-theme') || 'light';
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    // API functions
+    async function checkHealth() {
+      try {
+        const res = await fetch(`${API_BASE}/health`);
+        const data = await res.json();
+        updateStatus(true, `Connected • ${data.trips_count?.toLocaleString()} trips in database`);
+        return true;
+      } catch (err) {
+        updateStatus(false, `Backend unreachable: ${err.message}`);
+        return false;
+      }
+    }
+
+    function updateStatus(isHealthy, message) {
+      const indicator = document.getElementById('status-indicator');
+      const text = document.getElementById('status-text');
+      indicator.className = `status-indicator ${isHealthy ? '' : 'error'}`;
+      text.textContent = message;
+    }
+
+    async function fetchSummary(filters = {}) {
+      const params = new URLSearchParams();
+      if (filters.start) params.set('start', filters.start);
+      if (filters.end) params.set('end', filters.end);
+      
+      const res = await fetch(`${API_BASE}/api/summary?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function fetchTrips(page = 1, filters = {}) {
+      const params = new URLSearchParams({
+        page: page,
+        limit: TRIPS_PER_PAGE
+      });
+      
+      if (filters.start) params.set('start', filters.start);
+      if (filters.end) params.set('end', filters.end);
+      if (filters.min_distance) params.set('min_distance', filters.min_distance);
+      if (filters.max_distance) params.set('max_distance', filters.max_distance);
+      
+      const res = await fetch(`${API_BASE}/api/trips?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function fetchHotspots(filters = {}) {
+      const params = new URLSearchParams({ k: 10 });
+      if (filters.start) params.set('start', filters.start);
+      if (filters.end) params.set('end', filters.end);
+      
+      const res = await fetch(`${API_BASE}/api/hotspots?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function fetchInsights(filters = {}) {
+      const params = new URLSearchParams();
+      if (filters.start) params.set('start', filters.start);
+      if (filters.end) params.set('end', filters.end);
+      
+      const res = await fetch(`${API_BASE}/api/insights?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    // UI update functions
+    function updateSummaryStats(data) {
+      document.getElementById('total-trips').textContent = (data.total_trips || 0).toLocaleString();
+      document.getElementById('avg-distance').textContent = (data.avg_distance_km || 0).toFixed(2);
+      document.getElementById('avg-fare').textContent = '$' + (data.avg_fare || 0).toFixed(2);
+      document.getElementById('avg-speed').textContent = (data.avg_speed_kmh || 0).toFixed(1);
+    }
+
+    function updateTripsTable(data) {
+      const tbody = document.getElementById('trips-tbody');
+      tbody.innerHTML = '';
+      
+      const trips = data.rows || [];
+      if (trips.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No trips found</td></tr>';
+        return;
+      }
+
+      trips.forEach(trip => {
+        const row = document.createElement('tr');
+        const duration = trip.trip_duration_seconds ? (trip.trip_duration_seconds / 60).toFixed(1) : '—';
+        
+        row.innerHTML = `
+          <td>${trip.id || '—'}</td>
+          <td>${trip.pickup_datetime ? new Date(trip.pickup_datetime).toLocaleString() : '—'}</td>
+          <td>${duration}</td>
+          <td>${trip.trip_distance_km ? trip.trip_distance_km.toFixed(2) : '—'}</td>
+          <td>${trip.trip_speed_kmh ? trip.trip_speed_kmh.toFixed(1) : '—'}</td>
+          <td>$${trip.fare_amount ? trip.fare_amount.toFixed(2) : '0.00'}</td>
+          <td>${trip.passenger_count || '—'}</td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      // Update pagination
+      const totalPages = Math.ceil((data.total || 0) / TRIPS_PER_PAGE);
+      document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages}`;
+      document.getElementById('prev-page').disabled = currentPage <= 1;
+      document.getElementById('next-page').disabled = currentPage >= totalPages;
+    }
+
+    let charts = {};
+
+    function updateHourChart(data) {
+      const ctx = document.getElementById('hourChart').getContext('2d');
+      const hourData = data.rush_hour?.data || [];
+      
+      if (charts.hour) charts.hour.destroy();
+      
+      charts.hour = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: hourData.map(d => d.hour_of_day + ':00'),
+          datasets: [{
+            label: 'Trips',
+            data: hourData.map(d => d.trips),
+            backgroundColor: '#0d6efd'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    function updateHotspotsChart(data) {
+      const ctx = document.getElementById('hotspotsChart').getContext('2d');
+      const hotspots = data.slice(0, 10);
+      
+      if (charts.hotspots) charts.hotspots.destroy();
+      
+      charts.hotspots = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: hotspots.map(h => (h.zone_name || 'Unknown').substring(0, 20)),
+          datasets: [{
+            label: 'Trips',
+            data: hotspots.map(h => h.trips),
+            backgroundColor: '#198754'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          indexAxis: 'y',
+          plugins: { legend: { display: false } },
+          scales: { x: { beginAtZero: true } }
+        }
+      });
+    }
+
+    function updateDistanceChart(trips) {
+      const ctx = document.getElementById('distanceChart').getContext('2d');
+      const bins = [0, 2, 5, 10, 20, 50];
+      const labels = ['0-2', '2-5', '5-10', '10-20', '20-50', '50+'];
+      const counts = new Array(labels.length).fill(0);
+      
+      trips.forEach(t => {
+        const dist = t.trip_distance_km;
+        if (!dist) return;
+        const idx = bins.findIndex(b => dist < b);
+        counts[idx === -1 ? counts.length - 1 : idx]++;
+      });
+      
+      if (charts.distance) charts.distance.destroy();
+      
+      charts.distance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Trips',
+            data: counts,
+            backgroundColor: '#0dcaf0'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    function updateSpeedChart(trips) {
+      const ctx = document.getElementById('speedChart').getContext('2d');
+      const bins = [0, 10, 20, 30, 40, 60, 80];
+      const labels = ['0-10', '10-20', '20-30', '30-40', '40-60', '60-80', '80+'];
+      const counts = new Array(labels.length).fill(0);
+      
+      trips.forEach(t => {
+        const speed = t.trip_speed_kmh;
+        if (!speed) return;
+        const idx = bins.findIndex(b => speed < b);
+        counts[idx === -1 ? counts.length - 1 : idx]++;
+      });
+      
+      if (charts.speed) charts.speed.destroy();
+      
+      charts.speed = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Trips',
+            data: counts,
+            backgroundColor: '#ffc107'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    // Main data loading function
+    async function loadData() {
+      try {
+        const [summary, trips, hotspots, insights] = await Promise.all([
+          fetchSummary(currentFilters),
+          fetchTrips(currentPage, currentFilters),
+          fetchHotspots(currentFilters),
+          fetchInsights(currentFilters)
+        ]);
+
+        updateSummaryStats(summary);
+        updateTripsTable(trips);
+        updateHotspotsChart(hotspots);
+        updateHourChart(insights);
+        updateDistanceChart(trips.rows || []);
+        updateSpeedChart(trips.rows || []);
+      } catch (err) {
+        console.error('Error loading data:', err);
+        updateStatus(false, `Error: ${err.message}`);
+      }
+    }
+
+    // Filter handling
+    function getFilters() {
+      const filters = {};
+      
+      const dateFrom = document.getElementById('date-from').value;
+      const dateTo = document.getElementById('date-to').value;
+      const minDist = document.getElementById('distance-min').value;
+      const maxDist = document.getElementById('distance-max').value;
+      
+      if (dateFrom) filters.start = dateFrom;
+      if (dateTo) filters.end = dateTo;
+      if (minDist) filters.min_distance = minDist;
+      if (maxDist) filters.max_distance = maxDist;
+      
+      return filters;
+    }
+
+    document.getElementById('apply-filters').addEventListener('click', () => {
+      currentFilters = getFilters();
+      currentPage = 1;
+      loadData();
+    });
+
+    document.getElementById('reset-filters').addEventListener('click', () => {
+      document.getElementById('date-from').value = '';
+      document.getElementById('date-to').value = '';
+      document.getElementById('distance-min').value = '';
+      document.getElementById('distance-max').value = '';
+      currentFilters = {};
+      currentPage = 1;
+      loadData();
+    });
+
+    // Pagination
+    document.getElementById('prev-page').addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        loadData();
+      }
+    });
+
+    document.getElementById('next-page').addEventListener('click', () => {
+      currentPage++;
+      loadData();
+    });
+
+    // Initialize
+    async function init() {
+      applyTheme();
+      
+      const isHealthy = await checkHealth();
+      if (isHealthy) {
+        await loadData();
+      } else {
+        document.getElementById('trips-tbody').innerHTML = `
+          <tr><td colspan="7" class="error-message">
+            Cannot connect to backend at ${API_BASE}. 
+            Please ensure the Flask server is running on port 3000.
+          </td></tr>
+        `;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
+
