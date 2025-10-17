@@ -17,7 +17,8 @@ window.API_BASE = (function getApiBase() {
   // Production or other environments
   return `${window.location.protocol}//${hostname}:3000`;
 })();
-console.log('API Base URL:', window.API_BASE);
+
+console.log('API Base URL (window.API_BASE):', window.API_BASE);
 
 // ================================
 // VARIABLES
@@ -25,7 +26,6 @@ console.log('API Base URL:', window.API_BASE);
 let currentPage = 1;
 let currentFilters = {};
 const TRIPS_PER_PAGE = 50;
-let charts = {};
 
 // ================================
 // THEME MANAGEMENT
@@ -36,6 +36,16 @@ function applyTheme(theme) {
   const btn = document.getElementById('theme-toggle');
   if (btn) btn.textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode';
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const toggleBtn = document.getElementById('theme-toggle');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      const current = document.body.getAttribute('data-theme') || 'light';
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+  }
+});
 
 // ================================
 // API FUNCTIONS
@@ -60,6 +70,7 @@ function updateStatus(isHealthy, message) {
   if (text) text.textContent = message;
 }
 
+// ---------------- API Fetchers ----------------
 async function fetchSummary(filters = {}) {
   const params = new URLSearchParams(filters);
   const res = await fetch(`${window.API_BASE}/api/summary?${params}`);
@@ -68,7 +79,7 @@ async function fetchSummary(filters = {}) {
 }
 
 async function fetchTrips(page = 1, filters = {}) {
-  const params = new URLSearchParams({ page, limit: TRIPS_PER_PAGE, ...filters });
+  const params = new URLSearchParams({ page: page, limit: TRIPS_PER_PAGE, ...filters });
   const res = await fetch(`${window.API_BASE}/api/trips?${params}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
@@ -103,7 +114,7 @@ async function fetchFareStats(filters = {}) {
 }
 
 // ================================
-// UI UPDATE FUNCTIONS
+// UI & CHART FUNCTIONS
 // ================================
 function updateSummaryStats(data) {
   const elements = {
@@ -118,114 +129,11 @@ function updateSummaryStats(data) {
   });
 }
 
-function updateTripsTable(data) {
-  const tbody = document.getElementById('trips-tbody');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-
-  const trips = data.rows || [];
-  if (trips.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7">No trips found</td></tr>';
-    return;
-  }
-
-  trips.forEach(trip => {
-    const row = document.createElement('tr');
-    const duration = trip.trip_duration_seconds ? (trip.trip_duration_seconds / 60).toFixed(1) : '—';
-    row.innerHTML = `
-      <td>${trip.id || '—'}</td>
-      <td>${trip.pickup_datetime ? new Date(trip.pickup_datetime).toLocaleString() : '—'}</td>
-      <td>${duration}</td>
-      <td>${trip.trip_distance_km ? trip.trip_distance_km.toFixed(2) : '—'}</td>
-      <td>${trip.trip_speed_kmh ? trip.trip_speed_kmh.toFixed(1) : '—'}</td>
-      <td>$${trip.fare_amount ? trip.fare_amount.toFixed(2) : '0.00'}</td>
-      <td>${trip.passenger_count || '—'}</td>
-    `;
-    tbody.appendChild(row);
-  });
-
-  const totalPages = Math.ceil((data.total || 0) / TRIPS_PER_PAGE);
-  const pageInfo = document.getElementById('page-info');
-  const prevBtn = document.getElementById('prev-page');
-  const nextBtn = document.getElementById('next-page');
-  if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-  if (prevBtn) prevBtn.disabled = currentPage <= 1;
-  if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
-}
+// ... keep the rest of your main.js unchanged for trips table, charts, filters, initialization
 
 // ================================
-// CHARTS & INSIGHTS
+// INITIALIZATION
 // ================================
-function updateHourChart(data) { /* ... your existing chart code ... */ }
-function updateHotspotsChart(data) { /* ... your existing chart code ... */ }
-function updateDistanceChart(trips) { /* ... your existing chart code ... */ }
-function updateSpeedChart(trips) { /* ... your existing chart code ... */ }
-function updateTopRoutesChart(routes) { /* ... your existing chart code ... */ }
-function updateInsightsSection(insights, fareStats, routes) { /* ... your existing code ... */ }
-
-// ================================
-// DATA LOADING
-// ================================
-async function loadData() {
-  try {
-    const [summary, trips, hotspots, insights, routes, fareStats] = await Promise.all([
-      fetchSummary(currentFilters),
-      fetchTrips(currentPage, currentFilters),
-      fetchHotspots(currentFilters),
-      fetchInsights(currentFilters),
-      fetchTopRoutes(currentFilters),
-      fetchFareStats(currentFilters)
-    ]);
-
-    updateSummaryStats(summary);
-    updateTripsTable(trips);
-    updateHotspotsChart(hotspots);
-    updateHourChart(insights);
-    updateDistanceChart(trips.rows || []);
-    updateSpeedChart(trips.rows || []);
-    updateTopRoutesChart(routes);
-    updateInsightsSection(insights, fareStats, routes);
-  } catch (err) {
-    console.error('Error loading data:', err);
-    updateStatus(false, `Error: ${err.message}`);
-  }
-}
-
-// ================================
-// FILTER HANDLING
-// ================================
-function getFilters() {
-  const filters = {};
-  const dateFrom = document.getElementById('date-from')?.value;
-  const dateTo = document.getElementById('date-to')?.value;
-  const minDist = document.getElementById('distance-min')?.value;
-  const maxDist = document.getElementById('distance-max')?.value;
-
-  if (dateFrom) filters.start = dateFrom;
-  if (dateTo) filters.end = dateTo;
-  if (minDist) filters.min_distance = minDist;
-  if (maxDist) filters.max_distance = maxDist;
-
-  return filters;
-}
-
-// ================================
-// EVENT LISTENERS & INIT
-// ================================
-document.addEventListener('DOMContentLoaded', () => {
-  const applyBtn = document.getElementById('apply-filters');
-  const resetBtn = document.getElementById('reset-filters');
-  const prevBtn = document.getElementById('prev-page');
-  const nextBtn = document.getElementById('next-page');
-
-  if (applyBtn) applyBtn.addEventListener('click', () => { currentFilters = getFilters(); currentPage = 1; loadData(); });
-  if (resetBtn) resetBtn.addEventListener('click', () => { document.getElementById('date-from').value = ''; document.getElementById('date-to').value = ''; document.getElementById('distance-min').value = ''; document.getElementById('distance-max').value = ''; currentFilters = {}; currentPage = 1; loadData(); });
-  if (prevBtn) prevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; loadData(); } });
-  if (nextBtn) nextBtn.addEventListener('click', () => { currentPage++; loadData(); });
-
-  init();
-});
-
 async function init() {
   applyTheme();
   console.log('Initializing dashboard...');
@@ -236,6 +144,10 @@ async function init() {
     await loadData();
   } else {
     const tbody = document.getElementById('trips-tbody');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="7">Cannot connect to backend at ${window.API_BASE}</td></tr>`;
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="7">Cannot connect to backend at ${window.API_BASE}</td></tr>`;
+    }
   }
 }
+
+document.addEventListener('DOMContentLoaded', init);
