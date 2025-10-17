@@ -1,26 +1,21 @@
 // ================================
 // GLOBAL API BASE
 // ================================
-window.API_BASE = "https://upgraded-fishstick-x5pvwv5g44rgc6rrp-3000.app.github.dev/";
-console.log("API Base set to:", window.API_BASE);
-window.API_BASE = (function getApiBase() {
+(function () {
   const hostname = window.location.hostname;
+  let apiBase;
 
-  // GitHub Codespaces detection
   if (hostname.includes('github.dev') || hostname.includes('githubpreview.dev')) {
-    return window.location.origin.replace('-3306.', '-3000.');
+    apiBase = "https://upgraded-fishstick-x5pvwv5g44rgc6rrp-3000.app.github.dev";
+  } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    apiBase = 'http://127.0.0.1:3000';
+  } else {
+    apiBase = `${window.location.protocol}//${hostname}:3000`;
   }
 
-  // Local development
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://127.0.0.1:3000';
-  }
-
-  // Production or other environments
-  return `${window.location.protocol}//${hostname}:3000`;
+  window.API_BASE = apiBase;
+  console.log("✅ API Base set to:", window.API_BASE);
 })();
-
-console.log('API Base URL (window.API_BASE):', window.API_BASE);
 
 // ================================
 // VARIABLES
@@ -72,7 +67,6 @@ function updateStatus(isHealthy, message) {
   if (text) text.textContent = message;
 }
 
-// ---------------- API Fetchers ----------------
 async function fetchSummary(filters = {}) {
   const params = new URLSearchParams(filters);
   const res = await fetch(`${window.API_BASE}/api/summary?${params}`);
@@ -130,8 +124,6 @@ function updateSummaryStats(data) {
     if (el) el.textContent = value;
   });
 }
-
-// ... keep the rest of your main.js unchanged for trips table, charts, filters, initialization
 
 // ================================
 // INITIALIZATION
