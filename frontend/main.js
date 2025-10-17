@@ -562,3 +562,11 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+// ================================
+// AUTO-CLICK APPLY FILTERS (for debugging)
+// ================================
+document.addEventListener('DOMContentLoaded', () => {
+  const applyBtn = document.getElementById('apply-filters');
+  console.log(applyBtn); // Logs the button element
+  if (applyBtn) applyBtn.click(); // Triggers applyFilters()
+});
