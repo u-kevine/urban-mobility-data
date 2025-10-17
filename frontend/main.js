@@ -1,14 +1,12 @@
 // ================================
-// API BASE URL SETUP
+// GLOBAL API BASE
 // ================================
-function getApiBase() {
+window.API_BASE = (function getApiBase() {
   const hostname = window.location.hostname;
 
   // GitHub Codespaces detection
   if (hostname.includes('github.dev') || hostname.includes('githubpreview.dev')) {
-    // Extract the base URL and change port to 3000 (Flask API port)
-    const baseUrl = window.location.origin.replace('-3306.', '-3000.');
-    return baseUrl;
+    return window.location.origin.replace('-3306.', '-3000.');
   }
 
   // Local development
@@ -18,14 +16,11 @@ function getApiBase() {
 
   // Production or other environments
   return `${window.location.protocol}//${hostname}:3000`;
-}
-
-// Make API_BASE global
-window.API_BASE = getApiBase();
+})();
 console.log('API Base URL:', window.API_BASE);
 
 // ================================
-// GLOBAL VARIABLES
+// VARIABLES
 // ================================
 let currentPage = 1;
 let currentFilters = {};
@@ -42,25 +37,12 @@ function applyTheme(theme) {
   if (btn) btn.textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode';
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const toggleBtn = document.getElementById('theme-toggle');
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', () => {
-      const current = document.body.getAttribute('data-theme') || 'light';
-      applyTheme(current === 'dark' ? 'light' : 'dark');
-    });
-  }
-});
-
 // ================================
 // API FUNCTIONS
 // ================================
 async function checkHealth() {
   try {
-    const res = await fetch(`${window.API_BASE}/health`, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' }
-    });
+    const res = await fetch(`${window.API_BASE}/health`, { method: 'GET', headers: { Accept: 'application/json' } });
     const data = await res.json();
     updateStatus(true, `Connected • ${data.trips_count?.toLocaleString()} trips in database`);
     return true;
@@ -86,7 +68,7 @@ async function fetchSummary(filters = {}) {
 }
 
 async function fetchTrips(page = 1, filters = {}) {
-  const params = new URLSearchParams({ page: page, limit: TRIPS_PER_PAGE, ...filters });
+  const params = new URLSearchParams({ page, limit: TRIPS_PER_PAGE, ...filters });
   const res = await fetch(`${window.API_BASE}/api/trips?${params}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
@@ -172,7 +154,17 @@ function updateTripsTable(data) {
 }
 
 // ================================
-// INIT AND LOAD DATA
+// CHARTS & INSIGHTS
+// ================================
+function updateHourChart(data) { /* ... your existing chart code ... */ }
+function updateHotspotsChart(data) { /* ... your existing chart code ... */ }
+function updateDistanceChart(trips) { /* ... your existing chart code ... */ }
+function updateSpeedChart(trips) { /* ... your existing chart code ... */ }
+function updateTopRoutesChart(routes) { /* ... your existing chart code ... */ }
+function updateInsightsSection(insights, fareStats, routes) { /* ... your existing code ... */ }
+
+// ================================
+// DATA LOADING
 // ================================
 async function loadData() {
   try {
@@ -187,12 +179,52 @@ async function loadData() {
 
     updateSummaryStats(summary);
     updateTripsTable(trips);
-    // Charts and insights updating omitted here for brevity
+    updateHotspotsChart(hotspots);
+    updateHourChart(insights);
+    updateDistanceChart(trips.rows || []);
+    updateSpeedChart(trips.rows || []);
+    updateTopRoutesChart(routes);
+    updateInsightsSection(insights, fareStats, routes);
   } catch (err) {
     console.error('Error loading data:', err);
     updateStatus(false, `Error: ${err.message}`);
   }
 }
+
+// ================================
+// FILTER HANDLING
+// ================================
+function getFilters() {
+  const filters = {};
+  const dateFrom = document.getElementById('date-from')?.value;
+  const dateTo = document.getElementById('date-to')?.value;
+  const minDist = document.getElementById('distance-min')?.value;
+  const maxDist = document.getElementById('distance-max')?.value;
+
+  if (dateFrom) filters.start = dateFrom;
+  if (dateTo) filters.end = dateTo;
+  if (minDist) filters.min_distance = minDist;
+  if (maxDist) filters.max_distance = maxDist;
+
+  return filters;
+}
+
+// ================================
+// EVENT LISTENERS & INIT
+// ================================
+document.addEventListener('DOMContentLoaded', () => {
+  const applyBtn = document.getElementById('apply-filters');
+  const resetBtn = document.getElementById('reset-filters');
+  const prevBtn = document.getElementById('prev-page');
+  const nextBtn = document.getElementById('next-page');
+
+  if (applyBtn) applyBtn.addEventListener('click', () => { currentFilters = getFilters(); currentPage = 1; loadData(); });
+  if (resetBtn) resetBtn.addEventListener('click', () => { document.getElementById('date-from').value = ''; document.getElementById('date-to').value = ''; document.getElementById('distance-min').value = ''; document.getElementById('distance-max').value = ''; currentFilters = {}; currentPage = 1; loadData(); });
+  if (prevBtn) prevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; loadData(); } });
+  if (nextBtn) nextBtn.addEventListener('click', () => { currentPage++; loadData(); });
+
+  init();
+});
 
 async function init() {
   applyTheme();
@@ -204,12 +236,6 @@ async function init() {
     await loadData();
   } else {
     const tbody = document.getElementById('trips-tbody');
-    if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="7">Cannot connect to backend at ${window.API_BASE}</td></tr>`;
-    }
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7">Cannot connect to backend at ${window.API_BASE}</td></tr>`;
   }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-  init();
-});
