@@ -201,12 +201,18 @@ body {
   border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  min-height: 300px;
 }
 
 .chart-card h3 {
   font-size: 1rem;
   margin-bottom: 1rem;
   color: var(--text-primary);
+}
+
+.chart-card canvas {
+  max-height: 250px !important;
+  height: 250px !important;
 }
 
 .table-container {
@@ -265,6 +271,7 @@ tbody tr:hover {
   border-radius: 4px;
   margin: 1rem 0;
   border: 1px solid var(--danger-color);
+  text-align: center;
 }
 
 .pagination {
@@ -282,6 +289,11 @@ tbody tr:hover {
   color: var(--text-primary);
   border-radius: 4px;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: var(--bg-secondary);
 }
 
 .pagination button:disabled {
@@ -289,7 +301,7 @@ tbody tr:hover {
   cursor: not-allowed;
 }
 
-/* Additional styles for enhanced features */
+/* Insights Section */
 .insights-section {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
@@ -311,9 +323,14 @@ tbody tr:hover {
   margin-bottom: 1rem;
 }
 
+.insight-card:last-child {
+  margin-bottom: 0;
+}
+
 .insight-card h4 {
   color: var(--accent-color);
   margin-bottom: 0.5rem;
+  font-size: 0.95rem;
 }
 
 .insight-card p {
@@ -324,4 +341,31 @@ tbody tr:hover {
 .metric-highlight {
   font-weight: 600;
   color: var(--accent-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .header {
+    padding: 1rem;
+  }
+
+  .header h1 {
+    font-size: 1.25rem;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
