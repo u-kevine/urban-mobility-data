@@ -1,0 +1,9 @@
+chunk_index,excluded_count,sample_reason
+1,155,invalid_dropoff_coord
+2,158,invalid_pickup_coord;invalid_dropoff_coord
+3,136,invalid_dropoff_coord
+4,159,invalid_dropoff_coord
+5,185,invalid_dropoff_coord
+6,128,unrealistic_speed
+7,152,invalid_dropoff_coord
+8,39,invalid_dropoff_coord
