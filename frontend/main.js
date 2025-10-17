@@ -1,6 +1,8 @@
 // ================================
 // GLOBAL API BASE
 // ================================
+window.API_BASE = "https://upgraded-fishstick-x5pvwv5g44rgc6rrp-3000.app.github.dev/";
+console.log("API Base set to:", window.API_BASE);
 window.API_BASE = (function getApiBase() {
   const hostname = window.location.hostname;
 

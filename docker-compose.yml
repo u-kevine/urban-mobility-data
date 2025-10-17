@@ -19,3 +19,9 @@ services:
 volumes:
   mysql_data:
   
+frontend:
+    build: ./frontend  # your frontend folder with Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
