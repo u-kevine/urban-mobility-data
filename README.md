@@ -1095,3 +1095,6 @@ Team 17 - Urban Mobility Data Explorer
 
 # github link
 https://github.com/u-kevine/urban-mobility-data.git
+
+#link to the application
+https://urban-mobility-data.onrender.com
