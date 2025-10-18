@@ -72,6 +72,14 @@ async function fetchTrips(page = 1, filters = {}) {
   return res.json();
 }
 
+// Fetch more trips for chart data generation
+async function fetchTripsForCharts(filters = {}) {
+  const params = new URLSearchParams({ page: 1, limit: 1000, ...filters });
+  const res = await fetch(`${window.API_BASE}/api/trips?${params}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
 async function fetchHotspots(filters = {}) {
   const params = new URLSearchParams({ k: 10, ...filters });
   const res = await fetch(`${window.API_BASE}/api/hotspots?${params}`);
@@ -188,24 +196,73 @@ function getChartColors() {
 }
 
 // ================================
+// DISTRIBUTION GENERATION FUNCTIONS
+// ================================
+
+function generateHourDistribution(trips) {
+  const hourCounts = new Array(24).fill(0);
+  
+  trips.forEach(trip => {
+    if (trip.hour_of_day !== null && trip.hour_of_day !== undefined) {
+      const hour = parseInt(trip.hour_of_day);
+      if (hour >= 0 && hour < 24) {
+        hourCounts[hour]++;
+      }
+    }
+  });
+  
+  return hourCounts;
+}
+
+function generateDistanceDistribution(trips) {
+  const bins = [0, 5, 10, 15, 20, 25, 30, 40, 50];
+  const binCounts = new Array(bins.length - 1).fill(0);
+  
+  trips.forEach(trip => {
+    const dist = parseFloat(trip.trip_distance_km);
+    if (!isNaN(dist) && dist >= 0) {
+      for (let i = 0; i < bins.length - 1; i++) {
+        if (dist >= bins[i] && dist < bins[i + 1]) {
+          binCounts[i]++;
+          break;
+        } else if (dist >= bins[bins.length - 1]) {
+          binCounts[bins.length - 2]++;
+          break;
+        }
+      }
+    }
+  });
+  
+  return { bins, counts: binCounts };
+}
+
+function generateSpeedDistribution(trips) {
+  const bins = [0, 10, 20, 30, 40, 50, 60, 80, 100];
+  const binCounts = new Array(bins.length - 1).fill(0);
+  
+  trips.forEach(trip => {
+    const speed = parseFloat(trip.trip_speed_kmh);
+    if (!isNaN(speed) && speed >= 0 && speed < 150) {
+      for (let i = 0; i < bins.length - 1; i++) {
+        if (speed >= bins[i] && speed < bins[i + 1]) {
+          binCounts[i]++;
+          break;
+        }
+      }
+    }
+  });
+  
+  return { bins, counts: binCounts };
+}
+
+// ================================
 // CHART RENDERING FUNCTIONS
 // ================================
 
-function renderHourChart(data) {
+function renderHourChart(trips) {
   const colors = getChartColors();
-  
-  // Create hour labels and data
   const hours = Array.from({length: 24}, (_, i) => i);
-  const hourData = new Array(24).fill(0);
-  
-  // If we have hour_distribution from summary
-  if (data.hour_distribution) {
-    data.hour_distribution.forEach(item => {
-      if (item.hour_of_day !== null && item.hour_of_day >= 0 && item.hour_of_day < 24) {
-        hourData[item.hour_of_day] = item.trips;
-      }
-    });
-  }
+  const hourData = generateHourDistribution(trips);
 
   createChart('hourChart', {
     type: 'bar',
@@ -223,12 +280,7 @@ function renderHourChart(data) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          display: false
-        },
-        title: {
-          display: false
-        }
+        legend: { display: false }
       },
       scales: {
         y: {
@@ -245,26 +297,13 @@ function renderHourChart(data) {
   });
 }
 
-function renderDistanceChart(data) {
+function renderDistanceChart(trips) {
   const colors = getChartColors();
+  const { bins, counts } = generateDistanceDistribution(trips);
+  const labels = [];
   
-  // Create distance bins
-  const bins = [0, 2, 5, 10, 15, 20, 30, 50];
-  const labels = bins.slice(0, -1).map((bin, i) => `${bin}-${bins[i + 1]} km`);
-  const distData = new Array(labels.length).fill(0);
-  
-  // If we have distance_distribution
-  if (data.distance_distribution) {
-    data.distance_distribution.forEach(item => {
-      const dist = item.distance_range || item.bin;
-      const trips = item.trips || item.count;
-      for (let i = 0; i < bins.length - 1; i++) {
-        if (dist >= bins[i] && dist < bins[i + 1]) {
-          distData[i] += trips;
-          break;
-        }
-      }
-    });
+  for (let i = 0; i < bins.length - 1; i++) {
+    labels.push(`${bins[i]}-${bins[i + 1]} km`);
   }
 
   createChart('distanceChart', {
@@ -273,7 +312,7 @@ function renderDistanceChart(data) {
       labels: labels,
       datasets: [{
         label: 'Trips',
-        data: distData,
+        data: counts,
         backgroundColor: colors.success,
         borderColor: colors.success,
         borderWidth: 1
@@ -283,9 +322,7 @@ function renderDistanceChart(data) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          display: false
-        }
+        legend: { display: false }
       },
       scales: {
         y: {
@@ -302,26 +339,13 @@ function renderDistanceChart(data) {
   });
 }
 
-function renderSpeedChart(data) {
+function renderSpeedChart(trips) {
   const colors = getChartColors();
+  const { bins, counts } = generateSpeedDistribution(trips);
+  const labels = [];
   
-  // Create speed bins
-  const bins = [0, 10, 20, 30, 40, 50, 60, 80];
-  const labels = bins.slice(0, -1).map((bin, i) => `${bin}-${bins[i + 1]} km/h`);
-  const speedData = new Array(labels.length).fill(0);
-  
-  // If we have speed_distribution
-  if (data.speed_distribution) {
-    data.speed_distribution.forEach(item => {
-      const speed = item.speed_range || item.bin;
-      const trips = item.trips || item.count;
-      for (let i = 0; i < bins.length - 1; i++) {
-        if (speed >= bins[i] && speed < bins[i + 1]) {
-          speedData[i] += trips;
-          break;
-        }
-      }
-    });
+  for (let i = 0; i < bins.length - 1; i++) {
+    labels.push(`${bins[i]}-${bins[i + 1]} km/h`);
   }
 
   createChart('speedChart', {
@@ -330,7 +354,7 @@ function renderSpeedChart(data) {
       labels: labels,
       datasets: [{
         label: 'Trips',
-        data: speedData,
+        data: counts,
         backgroundColor: colors.secondary,
         borderColor: colors.secondary,
         borderWidth: 1
@@ -340,9 +364,7 @@ function renderSpeedChart(data) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          display: false
-        }
+        legend: { display: false }
       },
       scales: {
         y: {
@@ -371,7 +393,7 @@ function renderHotspotsChart(hotspots) {
   const data = hotspots.map(h => h.trips || 0);
 
   createChart('hotspotsChart', {
-    type: 'horizontalBar',
+    type: 'bar',
     data: {
       labels: labels,
       datasets: [{
@@ -387,9 +409,7 @@ function renderHotspotsChart(hotspots) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          display: false
-        }
+        legend: { display: false }
       },
       scales: {
         x: {
@@ -422,7 +442,7 @@ function renderRoutesChart(routes) {
   const data = routes.map(r => r.trips || 0);
 
   createChart('routesChart', {
-    type: 'horizontalBar',
+    type: 'bar',
     data: {
       labels: labels,
       datasets: [{
@@ -438,9 +458,7 @@ function renderRoutesChart(routes) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          display: false
-        }
+        legend: { display: false }
       },
       scales: {
         x: {
@@ -471,7 +489,6 @@ function renderInsights(insights) {
 
   let html = '';
 
-  // Rush hour insights
   if (insights.rush_hour && insights.rush_hour.data) {
     const rushData = insights.rush_hour.data;
     const maxTrips = Math.max(...rushData.map(d => d.trips || 0));
@@ -488,7 +505,6 @@ function renderInsights(insights) {
     }
   }
 
-  // Spatial insights
   if (insights.spatial_hotspots) {
     const morning = insights.spatial_hotspots.morning || [];
     const evening = insights.spatial_hotspots.evening || [];
@@ -563,14 +579,17 @@ async function loadData() {
   console.log('Loading data with filters:', currentFilters);
   
   try {
-    // Fetch summary data
+    // Fetch summary stats
     const summary = await fetchSummary(currentFilters);
     updateSummaryStats(summary);
-    renderHourChart(summary);
-    renderDistanceChart(summary);
-    renderSpeedChart(summary);
 
-    // Fetch trips data
+    // Fetch trips for charts (larger sample)
+    const chartTrips = await fetchTripsForCharts(currentFilters);
+    renderHourChart(chartTrips.rows || []);
+    renderDistanceChart(chartTrips.rows || []);
+    renderSpeedChart(chartTrips.rows || []);
+
+    // Fetch trips for table (paginated)
     const trips = await fetchTrips(currentPage, currentFilters);
     updateTripsTable(trips);
     updatePagination(trips);
@@ -632,14 +651,12 @@ function setupEventListeners() {
     });
   }
 
-  // Theme toggle
   const toggleBtn = document.getElementById('theme-toggle');
   if (toggleBtn) {
     toggleBtn.addEventListener('click', () => {
       const current = document.body.getAttribute('data-theme') || 'light';
       const newTheme = current === 'dark' ? 'light' : 'dark';
       applyTheme(newTheme);
-      // Redraw charts with new theme colors
       loadData();
     });
   }
@@ -665,5 +682,4 @@ async function init() {
   }
 }
 
-// Start when DOM is ready
 document.addEventListener('DOMContentLoaded', init);

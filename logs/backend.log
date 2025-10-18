@@ -1,0 +1,18 @@
+INFO:__main__:Starting Flask app on port 3000
+INFO:__main__:Database URL: mysql+pymysql://my_user:my_password@localhost:3306/my_database
+ * Serving Flask app 'app'
+ * Debug mode: off
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://10.0.1.218:3000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug:127.0.0.1 - - [18/Oct/2025 10:01:46] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [18/Oct/2025 10:01:59] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [18/Oct/2025 10:02:02] "GET /api/summary HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [18/Oct/2025 10:02:05] "GET /api/trips?page=1&limit=50 HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [18/Oct/2025 10:02:08] "GET /api/hotspots?k=10 HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [18/Oct/2025 10:03:03] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [18/Oct/2025 10:03:05] "GET /api/summary HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [18/Oct/2025 10:03:06] "GET /api/trips?page=1&limit=50 HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [18/Oct/2025 10:03:09] "GET /api/hotspots?k=10 HTTP/1.1" 200 -
