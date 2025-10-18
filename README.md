@@ -2,7 +2,7 @@
 
 A comprehensive full-stack application for analyzing New York City taxi trip patterns using real-world datasets. This project demonstrates enterprise-level data processing, database design, and interactive visualization capabilities for urban mobility insights.
 
-# Team 17
+## Team 17
 - Kevine Uwisanga
 - Tito Jean Sibo
 - Nkhomotabo Amazing Mkhonta
@@ -20,6 +20,7 @@ This application processes raw NYC taxi trip data to provide meaningful insights
 - **Modern Interface**: Responsive design with dark and light theme support
 - **Advanced Filtering**: Filter data by date ranges, distance, fare amounts, and more
 - **Docker Support**: Easy deployment with Docker and Docker Compose
+- **Normalized Schema**: 3-table design (vendors, zones, trips) for optimal data organization
 
 ## System Requirements
 
@@ -50,21 +51,19 @@ git clone https://github.com/u-kevine/urban-mobility-data.git
 cd urban-mobility-data
 ```
 
-### Step 2: Start Services with Docker Compose
+### Step 2: Start MySQL Database with Docker Compose
 
 ```bash
-# Start all services (MySQL, Backend API, Frontend)
-docker-compose up -d
+# Start MySQL service only
+docker-compose up -d mysql
 ```
 
 This command will:
 - Pull the MySQL 8.0 image
 - Create and start the MySQL container on port 3306
 - Set up the database with credentials from docker-compose.yml
-- Build and start the frontend container on port 8080
-- Build and start the backend API container
 
-**Verify services are running**:
+**Verify MySQL is running**:
 ```bash
 docker-compose ps
 ```
@@ -73,14 +72,12 @@ Expected output:
 ```
 NAME                COMMAND                  SERVICE             STATUS              PORTS
 mysql_db            "docker-entrypoint.s…"   mysql               Up                  0.0.0.0:3306->3306/tcp
-backend_api         "gunicorn -w 4 -b 0.…"   backend             Up                  0.0.0.0:3000->3000/tcp
-frontend_web        "nginx -g 'daemon of…"   frontend            Up                  0.0.0.0:8080->80/tcp
 ```
 
 ### Step 3: Initialize Database Schema
 
 ```bash
-# Access MySQL container and create schema
+# Create the database schema
 docker exec -i mysql_db mysql -u my_user -pmy_password my_database < db/schema.sql
 ```
 
@@ -112,12 +109,24 @@ ls -lh data/raw/train.csv
 git lfs pull
 ```
 
-### Step 5: Run ETL Process (Load Data)
+### Step 5: Install Python Dependencies
 
 ```bash
-# Install Python dependencies (if not already done)
-pip install -r requirements.txt
+# Create virtual environment (recommended)
+python3 -m venv venv
 
+# Activate virtual environment
+source venv/bin/activate  # On Linux/macOS
+# OR
+venv\Scripts\activate     # On Windows
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Step 6: Run ETL Process (Load Data)
+
+```bash
 # Run ETL script to load data into MySQL
 python3 etl.py \
   --input data/raw/train.csv \
@@ -157,35 +166,70 @@ Cleaning log:              data/logs/cleaning_log.csv
 ============================================================
 ```
 
-### Step 6: Access the Application
+### Step 7: Start Application Services
 
-Once ETL is complete, access the dashboard:
+**Option A: Using convenience scripts (Recommended)**
+```bash
+# Start both backend and frontend
+./start_all.sh
 
-**Frontend Dashboard**: http://localhost:8080
+# This will:
+# - Start the backend API on port 3000
+# - Start the frontend server on port 8080
+# - Display access URLs and service status
+```
 
-**Backend API**: http://localhost:3000
+**Option B: Manual startup**
+```bash
+# Terminal 1: Start backend
+cd backend
+python3 app.py
 
-**API Health Check**: http://localhost:3000/health
+# Terminal 2: Start frontend (in a new terminal)
+cd frontend
+python3 -m http.server 8080
+```
 
-### Step 7: Stop and Manage Services
+### Step 8: Access the Application
+
+Once services are running:
+
+- **Frontend Dashboard**: http://localhost:8080
+- **Backend API**: http://localhost:3000
+- **API Health Check**: http://localhost:3000/health
+
+### Step 9: Verify Everything is Working
+
+```bash
+# Check status of all services
+./demo.sh
+```
+
+This script will verify:
+- Backend server status
+- Frontend server status
+- Database connection
+- Data loaded in database
+
+### Step 10: Stop Services
 
 ```bash
 # Stop all services
+./stop_all.sh
+
+# This will gracefully stop:
+# - Backend API server
+# - Frontend web server
+# - Clean up PID files
+```
+
+**To stop Docker services:**
+```bash
+# Stop MySQL container
 docker-compose down
 
 # Stop and remove volumes (WARNING: deletes database data)
 docker-compose down -v
-
-# View logs
-docker-compose logs -f
-
-# View logs for specific service
-docker-compose logs -f mysql
-docker-compose logs -f backend
-docker-compose logs -f frontend
-
-# Restart services
-docker-compose restart
 ```
 
 ## Complete Manual Setup Guide (Without Docker)
@@ -279,14 +323,8 @@ EXIT;
 ### Step 4: Initialize Database Schema
 
 ```bash
-# Navigate to the database directory
-cd db
-
 # Run the schema creation script
-mysql -u my_user -pmy_password my_database < schema.sql
-
-# Navigate back to project root
-cd ..
+mysql -u my_user -pmy_password my_database < db/schema.sql
 ```
 
 **Verify tables were created**:
@@ -331,10 +369,18 @@ python3 etl.py \
 ### Step 7: Start the Backend API
 
 ```bash
-# Method 1: Using Flask directly
+# Method 1: Using convenience script (Development mode)
+./start_dev.sh
+
+# Method 2: Using convenience script (Production mode with Gunicorn)
+./start_server.sh
+
+# Method 3: Using Flask directly
+cd backend
 python3 app.py
 
-# Method 2: Using Gunicorn (Production)
+# Method 4: Using Gunicorn (Production)
+cd backend
 gunicorn -w 4 -b 0.0.0.0:3000 app:app
 
 # The API will be available at http://localhost:3000
@@ -371,7 +417,7 @@ Open your browser and navigate to: http://localhost:8080
 
 ## Docker Compose Configuration
 
-The project uses Docker Compose for easy deployment. Here's the configuration breakdown:
+The project uses Docker Compose for easy deployment. Here's the complete configuration:
 
 ### docker-compose.yml
 
@@ -379,7 +425,6 @@ The project uses Docker Compose for easy deployment. Here's the configuration br
 version: '3.8'
 
 services:
-  # MySQL Database
   mysql:
     image: mysql:8.0
     container_name: mysql_db
@@ -399,57 +444,20 @@ services:
       timeout: 20s
       retries: 10
 
-  # Backend API
-  backend:
-    build: .
-    container_name: backend_api
-    restart: always
-    environment:
-      DATABASE_URL: mysql+pymysql://my_user:my_password@mysql:3306/my_database
-      FLASK_ENV: production
-      PORT: 3000
-    ports:
-      - "3000:3000"
-    depends_on:
-      mysql:
-        condition: service_healthy
-    volumes:
-      - ./data:/app/data
-      - ./db:/app/db
-
-  # Frontend Dashboard
-  frontend:
-    build: ./frontend
-    container_name: frontend_web
-    restart: always
-    ports:
-      - "8080:80"
-    depends_on:
-      - backend
-
 volumes:
   mysql_data:
 ```
 
-### Service Descriptions
+### Service Description
 
 **mysql**:
 - Uses official MySQL 8.0 image
 - Persists data using named volume `mysql_data`
 - Uses native password authentication
-- Health check ensures database is ready before starting dependent services
+- Health check ensures database is ready before dependent services start
+- Exposes port 3306 for host access
 
-**backend**:
-- Builds from project root Dockerfile
-- Connects to MySQL using internal Docker network
-- Exposes port 3000 for API access
-- Mounts data and db directories for access to files
-
-**frontend**:
-- Builds from frontend/Dockerfile
-- Serves static files via Nginx
-- Connects to backend API
-- Exposes port 8080 for web access
+**Note**: The backend and frontend services are run locally (not containerized) to allow for easier development and debugging.
 
 ## Using the Dashboard
 
@@ -492,7 +500,7 @@ volumes:
 
 7. **Theme Toggle**:
    - Switch between Light and Dark modes
-   - Persists preference
+   - Persists preference in browser
 
 ### Example Usage Workflow
 
@@ -557,14 +565,12 @@ curl http://localhost:3000/health
 Get aggregate statistics
 
 **Query Parameters**:
-- `date_from` (optional): Start date (YYYY-MM-DD)
-- `date_to` (optional): End date (YYYY-MM-DD)
-- `distance_min` (optional): Minimum distance filter
-- `distance_max` (optional): Maximum distance filter
+- `start` (optional): Start date (YYYY-MM-DD)
+- `end` (optional): End date (YYYY-MM-DD)
 
 **Example**:
 ```bash
-curl "http://localhost:3000/api/summary?date_from=2024-01-01&date_to=2024-01-31"
+curl "http://localhost:3000/api/summary?start=2024-01-01&end=2024-01-31"
 ```
 
 **Response**:
@@ -584,8 +590,8 @@ Get paginated trip records
 **Query Parameters**:
 - `page` (default: 1): Page number
 - `limit` (default: 100, max: 1000): Records per page
-- `date_from` (optional): Start date
-- `date_to` (optional): End date
+- `start` (optional): Start date
+- `end` (optional): End date
 - `min_distance` (optional): Minimum distance
 - `max_distance` (optional): Maximum distance
 
@@ -746,7 +752,7 @@ docker-compose logs mysql
 # 1. Corrupted volume - remove and recreate
 docker-compose down -v
 docker volume rm urban-mobility-data_mysql_data
-docker-compose up -d
+docker-compose up -d mysql
 
 # 2. Permission issues - check volume permissions
 docker exec -it mysql_db ls -la /var/lib/mysql
@@ -846,10 +852,6 @@ venv\Scripts\activate     # Windows
 
 # Reinstall dependencies
 pip install -r requirements.txt --force-reinstall
-
-# For Docker, rebuild image
-docker-compose build backend
-docker-compose up -d backend
 ```
 
 #### Problem: "500 Internal Server Error"
@@ -857,14 +859,11 @@ docker-compose up -d backend
 **Solutions**:
 ```bash
 # Check logs
-# For Docker:
-docker-compose logs backend
-
-# For local setup:
-# Check terminal where app.py is running
+tail -f logs/backend.log
 
 # Enable debug mode
 export FLASK_DEBUG=1
+cd backend
 python3 app.py
 ```
 
@@ -902,92 +901,13 @@ python3 app.py
 
 ## Production Deployment
 
-### Using Docker Compose (Recommended)
+### Security Considerations
 
-1. **Update docker-compose.yml for production**:
-
-```yaml
-version: '3.8'
-
-services:
-  mysql:
-    image: mysql:8.0
-    container_name: mysql_db
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./db/backups:/backups
-    command: >
-      --default-authentication-plugin=mysql_native_password
-      --max_allowed_packet=256M
-      --max_connections=500
-
-  backend:
-    build: .
-    container_name: backend_api
-    restart: always
-    environment:
-      DATABASE_URL: mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
-      FLASK_ENV: production
-      PORT: 3000
-    ports:
-      - "3000:3000"
-    depends_on:
-      mysql:
-        condition: service_healthy
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-
-  frontend:
-    build: ./frontend
-    container_name: frontend_web
-    restart: always
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-
-  nginx:
-    image: nginx:alpine
-    container_name: nginx_proxy
-    restart: always
-    ports:
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl
-    depends_on:
-      - frontend
-      - backend
-
-volumes:
-  mysql_data:
-```
-
-2. **Create production .env file**:
-
-```bash
-cat > .env << EOF
-MYSQL_ROOT_PASSWORD=strong_root_password_here
-MYSQL_DATABASE=my_database
-MYSQL_USER=my_user
-MYSQL_PASSWORD=strong_password_here
-EOF
-```
-
-3. **Deploy**:
-
-```bash
-docker-compose up -d
-```
+1. **Change default passwords** in docker-compose.yml and .env
+2. **Use environment variables** for sensitive data
+3. **Enable SSL/TLS** for production deployments
+4. **Configure firewall** to restrict database access
+5. **Regular backups** of database
 
 ### Database Backup and Maintenance
 
@@ -1006,17 +926,17 @@ docker exec -it mysql_db mysql -u my_user -pmy_password my_database -e "OPTIMIZE
 
 ```bash
 # View all logs
-docker-compose logs -f
+tail -f logs/backend.log
+tail -f logs/frontend.log
 
-# View specific service logs
-docker-compose logs -f backend
+# View Docker logs
 docker-compose logs -f mysql
 
 # Monitor resource usage
 docker stats
 
-# Check container health
-docker-compose ps
+# Check service status
+./demo.sh
 ```
 
 ## Performance Optimization
@@ -1024,7 +944,7 @@ docker-compose ps
 ### Database Optimization
 
 ```sql
--- Add indexes for better query performance
+-- Add indexes for better query performance (already in schema.sql)
 CREATE INDEX idx_pickup_datetime ON trips(pickup_datetime);
 CREATE INDEX idx_dropoff_datetime ON trips(dropoff_datetime);
 CREATE INDEX idx_distance ON trips(trip_distance_km);
@@ -1044,22 +964,9 @@ SHOW INDEX FROM trips;
 
 ### Application Optimization
 
-1. **Enable caching** (add to app.py):
-```python
-from flask_caching import Cache
+The application already includes several optimizations:
 
-cache = Cache(app, config={
-    'CACHE_TYPE': 'simple',
-    'CACHE_DEFAULT_TIMEOUT': 300
-})
-
-@app.route("/api/summary")
-@cache.cached(timeout=60, query_string=True)
-def summary():
-    # ...existing code...
-```
-
-2. **Connection pooling** (already configured in app.py):
+1. **Connection pooling** in app.py:
 ```python
 engine = create_engine(
     DATABASE_URL,
@@ -1070,34 +977,42 @@ engine = create_engine(
 )
 ```
 
+2. **Chunked data processing** in ETL script
+3. **Batch inserts** for database operations
+4. **Indexed queries** for common operations
+
 ## Project Structure
 
 ```
 urban-mobility-data/
 ├── docker-compose.yml          # Docker orchestration
-├── Dockerfile                  # Backend container build
-├── .dockerignore              # Docker ignore patterns
-├── .env                       # Environment variables (not in git)
-├── .env.example               # Environment template
-├── requirements.txt           # Python dependencies
-├── app.py                     # Flask API server
-├── etl.py                     # Data processing script
-├── config.py                  # Configuration management
-├── README.md                  # This file
+├── .env                        # Environment variables (not in git)
+├── .env.example                # Environment template
+├── requirements.txt            # Python dependencies
+├── etl.py                      # Data processing script
+├── config.py                   # Configuration management
+├── README.md                   # This file
+├── start_all.sh                # Start all services
+├── start_dev.sh                # Start in development mode
+├── start_server.sh             # Start in production mode
+├── stop_all.sh                 # Stop all services
+├── demo.sh                     # Check system status
 ├── data/
 │   ├── raw/
-│   │   └── train.csv         # Raw taxi trip data (Git LFS)
+│   │   └── train.csv           # Raw taxi trip data (Git LFS)
 │   └── logs/
-│       └── cleaning_log.csv  # ETL cleaning log
+│       └── cleaning_log.csv    # ETL cleaning log
 ├── db/
-│   ├── schema.sql            # Database schema
-│   └── backups/              # Database backups
+│   └── schema.sql              # Database schema
+├── backend/
+│   └── app.py                  # Flask API application
 ├── frontend/
-│   ├── Dockerfile            # Frontend container build
-│   ├── index.html            # Dashboard HTML
-│   ├── main.js               # Frontend JavaScript
-│   └── style.css             # Dashboard styling
-└── logs/                     # Application logs
+│   ├── index.html              # Dashboard HTML
+│   ├── main.js                 # Frontend JavaScript
+│   └── style.css               # Dashboard styling
+└── logs/                       # Application logs
+    ├── backend.log
+    └── frontend.log
 ```
 
 ## Technology Stack
@@ -1107,17 +1022,50 @@ urban-mobility-data/
 - **Database**: MySQL 8.0
 - **Server**: Gunicorn (production), Flask dev server (development)
 - **Data Processing**: Pandas, NumPy
+- **Database Driver**: PyMySQL
 
 ### Frontend
 - **JavaScript**: Vanilla ES6+
 - **Charts**: Chart.js 3.9.1
 - **Styling**: Modern CSS with Grid and Flexbox
-- **Server**: Nginx (production), Python HTTP server (development)
+- **Server**: Python HTTP server (development)
 
 ### DevOps
 - **Containerization**: Docker & Docker Compose
 - **Version Control**: Git with Git LFS
 - **Environment**: Python virtual environments
+
+## Database Schema
+
+The project uses a normalized 3-table schema:
+
+### Tables
+
+1. **vendors**: Taxi companies or data vendors
+   - vendor_id (PK)
+   - vendor_code
+   - vendor_name
+   - notes
+
+2. **zones**: Geographic zones (neighborhoods, boroughs)
+   - zone_id (PK)
+   - zone_name
+   - borough
+   - centroid_lat, centroid_lon
+   - shapefile_id
+
+3. **trips**: Main fact table with trip records
+   - id (PK)
+   - vendor_id (FK)
+   - pickup_datetime, dropoff_datetime
+   - pickup_lat, pickup_lon
+   - dropoff_lat, dropoff_lon
+   - pickup_zone_id (FK), dropoff_zone_id (FK)
+   - passenger_count
+   - trip_distance_km, trip_duration_seconds
+   - fare_amount, tip_amount
+   - trip_speed_kmh, fare_per_km, tip_pct
+   - hour_of_day, day_of_week
 
 ## License
 
@@ -1127,7 +1075,8 @@ MIT License - Free to use, modify, and distribute.
 
 - **Troubleshooting**: See sections above for common issues
 - **API Documentation**: Built-in at http://localhost:3000/
-- **Error Logs**: Check `data/logs/` directory
+- **Error Logs**: Check `logs/` directory
+- **Cleaning Logs**: Check `data/logs/cleaning_log.csv`
 - **Video Walkthrough**: [Complete setup guide](https://youtu.be/6hXp0vrk6y8)
 
 ## Contributors
@@ -1137,3 +1086,12 @@ Team 17 - Urban Mobility Data Explorer
 - Data engineering
 - Database design
 - Interactive visualizations
+
+## Acknowledgments
+
+- NYC Taxi & Limousine Commission for providing open data
+- Flask and SQLAlchemy communities
+- Chart.js for visualization library
+
+# github link
+https://github.com/u-kevine/urban-mobility-data.git
