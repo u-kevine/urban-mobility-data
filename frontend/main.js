@@ -10,7 +10,7 @@
   } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
     apiBase = 'http://127.0.0.1:3000';
   } else {
-    apiBase = `${window.location.protocol}//${hostname}:3000`;
+    apiBase = `${window.location.protocol}//${hostname}`;
   }
 
   window.API_BASE = apiBase;
