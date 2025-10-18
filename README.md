@@ -1077,7 +1077,7 @@ MIT License - Free to use, modify, and distribute.
 - **API Documentation**: Built-in at http://localhost:3000/
 - **Error Logs**: Check `logs/` directory
 - **Cleaning Logs**: Check `data/logs/cleaning_log.csv`
-- **Video Walkthrough**: [Complete setup guide](https://youtu.be/6hXp0vrk6y8)
+- **Video Walkthrough**: [Complete setup guide](https://youtu.be/zvtoBLHEkJs)
 
 ## Contributors
 
